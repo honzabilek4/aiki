@@ -1,4 +1,4 @@
-use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -7,6 +7,8 @@ use tauri::{AppHandle, Emitter};
 pub struct PtyState {
     writer: Arc<Mutex<Box<dyn Write + Send>>>,
     master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
+    // Must keep child handle alive or the process gets killed on drop
+    _child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
 }
 
 impl PtyState {
@@ -22,18 +24,29 @@ impl PtyState {
             })
             .map_err(|e| format!("Failed to open PTY: {e}"))?;
 
-        // Determine user's shell
+        // Determine user's shell and spawn as login shell
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
 
         let mut cmd = CommandBuilder::new(&shell);
+        cmd.arg("-l");
+
+        // Inherit full environment, then override terminal vars
+        for (key, value) in std::env::vars() {
+            cmd.env(key, value);
+        }
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
 
-        pair.slave
+        if let Ok(home) = std::env::var("HOME") {
+            cmd.cwd(&home);
+        }
+
+        let child = pair
+            .slave
             .spawn_command(cmd)
             .map_err(|e| format!("Failed to spawn shell: {e}"))?;
 
-        // Drop slave — we only need the master side
+        // Drop slave side — we only need the master for I/O
         drop(pair.slave);
 
         let writer = pair
@@ -52,14 +65,11 @@ impl PtyState {
             loop {
                 match reader.read(&mut buf) {
                     Ok(0) => {
-                        // PTY closed
                         let _ = app.emit("pty-exit", ());
                         break;
                     }
                     Ok(n) => {
-                        let data = &buf[..n];
-                        // Send as raw bytes encoded to a Vec<u8> for the frontend
-                        let _ = app.emit("pty-output", data.to_vec());
+                        let _ = app.emit("pty-output", buf[..n].to_vec());
                     }
                     Err(e) => {
                         log::error!("PTY read error: {e}");
@@ -73,6 +83,7 @@ impl PtyState {
         Ok(Self {
             writer: Arc::new(Mutex::new(writer)),
             master: Arc::new(Mutex::new(pair.master)),
+            _child: Arc::new(Mutex::new(child)),
         })
     }
 
