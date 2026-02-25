@@ -1,8 +1,8 @@
 # Aiki 合気
 
-Harmonized energy. A fast, open-source terminal built for the agentic era.
+One terminal. Humans and AI in harmony.
 
-AI is a first-class citizen, not an add-on. Bring your own API key. Runs entirely local. No account, no cloud.
+Fast, open-source, local-first. Bring your own API key. No account, no cloud.
 
 ## Stack
 
@@ -21,12 +21,14 @@ AI is a first-class citizen, not an add-on. Bring your own API key. Runs entirel
 - [Node.js](https://nodejs.org/) (20+)
 - [pnpm](https://pnpm.io/)
 
-### Run
+### Run (with hot-reload)
 
 ```bash
 pnpm install
 pnpm tauri dev
 ```
+
+Vite hot-reloads frontend changes on save. Tauri watches `src-tauri/` and recompiles Rust changes automatically.
 
 ### Build
 
