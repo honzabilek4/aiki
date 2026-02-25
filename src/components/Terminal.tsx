@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
 
 export default function Terminal() {
@@ -29,18 +31,38 @@ export default function Terminal() {
 
     termRef.current = term;
 
-    // Local echo for now — will be replaced by PTY in Milestone 3
-    term.writeln("Aiki 合気");
-    term.writeln("One terminal. Humans and AI in harmony.\n");
+    // Send keystrokes to PTY
     term.onData((data) => {
-      term.write(data);
+      invoke("pty_write", { data });
     });
 
+    // Resize PTY when terminal resizes
+    term.onResize(({ cols, rows }) => {
+      invoke("pty_resize", { cols, rows });
+    });
+
+    // Listen for PTY output
+    const unlistenOutput = listen<number[]>("pty-output", (event) => {
+      const bytes = new Uint8Array(event.payload);
+      term.write(bytes);
+    });
+
+    // Listen for PTY exit
+    const unlistenExit = listen("pty-exit", () => {
+      term.writeln("\r\n[Process exited]");
+    });
+
+    // Spawn the shell
+    invoke("pty_spawn", { cols: term.cols, rows: term.rows });
+
+    // Handle window resize
     const handleResize = () => fitAddon.fit();
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      unlistenOutput.then((f) => f());
+      unlistenExit.then((f) => f());
       term.dispose();
     };
   }, []);
