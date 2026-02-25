@@ -1,7 +1,7 @@
 [package]
 name = "aiki"
 version = "0.1.0"
-description = "Aiki (合気) — harmonized energy. An AI-native terminal for the agentic era."
+description = "Aiki — one terminal. Humans and AI in harmony."
 authors = ["Jan Bílek"]
 license = "MIT"
 repository = ""
