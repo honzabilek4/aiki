@@ -7,8 +7,13 @@ struct PtySession(Mutex<Option<pty::PtyState>>);
 
 #[tauri::command]
 fn pty_spawn(cols: u16, rows: u16, app: tauri::AppHandle, state: State<PtySession>) -> Result<(), String> {
+    let mut guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
+    // Reuse existing session (StrictMode double-mounts in dev)
+    if guard.is_some() {
+        return Ok(());
+    }
     let session = pty::PtyState::spawn(cols, rows, app)?;
-    *state.0.lock().map_err(|e| format!("Lock error: {e}"))? = Some(session);
+    *guard = Some(session);
     Ok(())
 }
 
