@@ -1,7 +1,12 @@
 import Terminal from "./components/Terminal";
 
 function App() {
-  return <Terminal />;
+  return (
+    <>
+      <div data-tauri-drag-region className="titlebar" />
+      <Terminal />
+    </>
+  );
 }
 
 export default App;

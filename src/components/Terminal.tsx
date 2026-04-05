@@ -14,6 +14,8 @@ export default function Terminal() {
 
     const term = new XTerm({
       cursorBlink: true,
+      scrollOnUserInput: true,
+      scrollback: 10000,
       fontFamily: '"SF Mono", "Menlo", "Monaco", "Cascadia Code", monospace',
       fontSize: 14,
       theme: {
@@ -44,7 +46,7 @@ export default function Terminal() {
     // Listen for PTY output
     const unlistenOutput = listen<number[]>("pty-output", (event) => {
       const bytes = new Uint8Array(event.payload);
-      term.write(bytes);
+      term.write(bytes, () => term.scrollToBottom());
     });
 
     // Listen for PTY exit
