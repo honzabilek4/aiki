@@ -1,0 +1,23 @@
+# Aiki configuration
+# Copy to ~/.config/aiki/config.toml
+
+[shell]
+program = "/bin/zsh"
+args = ["-l"]
+
+[appearance]
+font_family = '"SF Mono", "Menlo", "Monaco", "Cascadia Code", monospace'
+font_size = 14
+cursor_blink = true
+scrollback = 10000
+
+[appearance.theme]
+background = "#1a1a2e"
+foreground = "#e0e0e0"
+cursor = "#e0e0e0"
+selection_background = "#3a3a5e"
+
+[ai]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+base_url = "https://api.anthropic.com"

@@ -1,18 +1,34 @@
+mod config;
 mod pty;
 
 use std::sync::Mutex;
 use tauri::State;
 
 struct PtySession(Mutex<Option<pty::PtyState>>);
+struct ConfigState(Mutex<config::AppConfig>);
 
 #[tauri::command]
-fn pty_spawn(cols: u16, rows: u16, app: tauri::AppHandle, state: State<PtySession>) -> Result<(), String> {
+fn get_config(state: State<ConfigState>) -> Result<config::AppConfig, String> {
+    let guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
+    Ok(guard.clone())
+}
+
+#[tauri::command]
+fn set_config(new_config: config::AppConfig, state: State<ConfigState>) -> Result<(), String> {
+    config::save(&new_config)?;
     let mut guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
-    // Reuse existing session (StrictMode double-mounts in dev)
+    *guard = new_config;
+    Ok(())
+}
+
+#[tauri::command]
+fn pty_spawn(cols: u16, rows: u16, app: tauri::AppHandle, pty_state: State<PtySession>, config_state: State<ConfigState>) -> Result<(), String> {
+    let mut guard = pty_state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
     if guard.is_some() {
         return Ok(());
     }
-    let session = pty::PtyState::spawn(cols, rows, app)?;
+    let config = config_state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
+    let session = pty::PtyState::spawn(cols, rows, app, &config.shell)?;
     *guard = Some(session);
     Ok(())
 }
@@ -33,9 +49,14 @@ fn pty_resize(cols: u16, rows: u16, state: State<PtySession>) -> Result<(), Stri
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let app_config = config::load();
+
     tauri::Builder::default()
         .manage(PtySession(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![pty_spawn, pty_write, pty_resize])
+        .manage(ConfigState(Mutex::new(app_config)))
+        .invoke_handler(tauri::generate_handler![
+            pty_spawn, pty_write, pty_resize, get_config, set_config
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

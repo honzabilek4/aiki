@@ -1,3 +1,4 @@
+use crate::config::ShellConfig;
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
@@ -7,12 +8,11 @@ use tauri::{AppHandle, Emitter};
 pub struct PtyState {
     writer: Arc<Mutex<Box<dyn Write + Send>>>,
     master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
-    // Must keep child handle alive or the process gets killed on drop
     _child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
 }
 
 impl PtyState {
-    pub fn spawn(cols: u16, rows: u16, app: AppHandle) -> Result<Self, String> {
+    pub fn spawn(cols: u16, rows: u16, app: AppHandle, shell_config: &ShellConfig) -> Result<Self, String> {
         let pty_system = native_pty_system();
 
         let pair = pty_system
@@ -24,11 +24,10 @@ impl PtyState {
             })
             .map_err(|e| format!("Failed to open PTY: {e}"))?;
 
-        // Determine user's shell and spawn as login shell
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-
-        let mut cmd = CommandBuilder::new(&shell);
-        cmd.arg("-l");
+        let mut cmd = CommandBuilder::new(&shell_config.program);
+        for arg in &shell_config.args {
+            cmd.arg(arg);
+        }
 
         // Inherit full environment, then override terminal vars
         for (key, value) in std::env::vars() {
