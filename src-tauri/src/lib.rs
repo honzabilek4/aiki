@@ -1,4 +1,5 @@
 mod config;
+mod input;
 mod pty;
 
 use std::sync::Mutex;
@@ -19,6 +20,11 @@ fn set_config(new_config: config::AppConfig, state: State<ConfigState>) -> Resul
     let mut guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
     *guard = new_config;
     Ok(())
+}
+
+#[tauri::command]
+fn classify_input(text: String) -> input::InputClassification {
+    input::classify(&text)
 }
 
 #[tauri::command]
@@ -52,10 +58,11 @@ pub fn run() {
     let app_config = config::load();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(PtySession(Mutex::new(None)))
         .manage(ConfigState(Mutex::new(app_config)))
         .invoke_handler(tauri::generate_handler![
-            pty_spawn, pty_write, pty_resize, get_config, set_config
+            pty_spawn, pty_write, pty_resize, get_config, set_config, classify_input
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

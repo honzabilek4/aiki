@@ -11,6 +11,20 @@ pub struct PtyState {
     _child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
 }
 
+/// Shell integration init script.
+/// Sets up preexec/precmd hooks that emit OSC 133 markers so the frontend
+/// can detect command boundaries in the persistent shell session.
+///
+/// Markers:
+///   \x1b]133;C\x07       — command is about to execute (preexec)
+///   \x1b]133;D;<code>\x07 — previous command finished with exit code (precmd)
+///   \x1b]133;A\x07       — prompt start (precmd, after D)
+///
+/// PS1 is set to empty since we don't render the prompt.
+const ZSH_INIT: &str = "stty -echo; unsetopt zle; PS1=''; __aiki_precmd() { printf '\\e]133;D;%d\\a\\e]133;A\\a' $?; }; __aiki_preexec() { printf '\\e]133;C\\a'; }; autoload -Uz add-zsh-hook; add-zsh-hook precmd __aiki_precmd; add-zsh-hook preexec __aiki_preexec\n";
+
+const BASH_INIT: &str = "stty -echo; PS1=''; __aiki_prompt_command() { local ec=$?; printf '\\e]133;D;%d\\a\\e]133;A\\a' $ec; }; trap 'printf \"\\e]133;C\\a\"' DEBUG; PROMPT_COMMAND=__aiki_prompt_command\n";
+
 impl PtyState {
     pub fn spawn(cols: u16, rows: u16, app: AppHandle, shell_config: &ShellConfig) -> Result<Self, String> {
         let pty_system = native_pty_system();
@@ -29,7 +43,6 @@ impl PtyState {
             cmd.arg(arg);
         }
 
-        // Inherit full environment, then override terminal vars
         for (key, value) in std::env::vars() {
             cmd.env(key, value);
         }
@@ -45,7 +58,6 @@ impl PtyState {
             .spawn_command(cmd)
             .map_err(|e| format!("Failed to spawn shell: {e}"))?;
 
-        // Drop slave side — we only need the master for I/O
         drop(pair.slave);
 
         let writer = pair
@@ -79,8 +91,22 @@ impl PtyState {
             }
         });
 
+        // Inject shell integration hooks after shell starts
+        let init_script = if shell_config.program.contains("zsh") {
+            ZSH_INIT
+        } else {
+            BASH_INIT
+        };
+
+        let writer_arc = Arc::new(Mutex::new(writer));
+        {
+            let mut w = writer_arc.lock().map_err(|e| format!("Lock error: {e}"))?;
+            w.write_all(init_script.as_bytes())
+                .map_err(|e| format!("Failed to write init script: {e}"))?;
+        }
+
         Ok(Self {
-            writer: Arc::new(Mutex::new(writer)),
+            writer: writer_arc,
             master: Arc::new(Mutex::new(pair.master)),
             _child: Arc::new(Mutex::new(child)),
         })
