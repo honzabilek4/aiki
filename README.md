@@ -1,8 +1,10 @@
 # Aiki 合気
 
-One terminal. Humans and AI in harmony.
+Human & AI, one terminal.
 
 Fast, open-source, local-first. Bring your own API key. No account, no cloud.
+
+![Aiki](assets/screenshot.png)
 
 ## Stack
 
