@@ -14,7 +14,11 @@ export default function BlockLog() {
   return (
     <div className="block-log">
       {blocks.length === 0 && (
-        <div className="block-log-empty">Type a command or ask AI below</div>
+        <div className="block-log-empty">
+          <div className="block-log-name">AIKI</div>
+          <div className="block-log-kanji">合気</div>
+          <span>human & ai, one terminal</span>
+        </div>
       )}
       {blocks.map((block) => {
         switch (block.type) {

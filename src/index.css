@@ -51,9 +51,29 @@ body {
 
 .block-log-empty {
   color: rgba(255, 255, 255, 0.25);
-  font-size: 13px;
   padding: 24px 0;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.block-log-empty span {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.block-log-name {
+  font-size: 18px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+
+.block-log-kanji {
+  font-size: 13px;
+  font-family: serif;
+  letter-spacing: 4px;
 }
 
 /* Command block */

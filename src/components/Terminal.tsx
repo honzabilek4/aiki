@@ -8,9 +8,10 @@ import "@xterm/xterm/css/xterm.css";
 
 interface TerminalProps {
   config: AppConfig;
+  onShellWrite?: (write: (data: string) => void) => void;
 }
 
-export default function Terminal({ config }: TerminalProps) {
+export default function Terminal({ config, onShellWrite }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
 
@@ -41,6 +42,10 @@ export default function Terminal({ config }: TerminalProps) {
     termRef.current = term;
 
     term.onData((data) => {
+      invoke("pty_write", { data });
+    });
+
+    onShellWrite?.((data: string) => {
       invoke("pty_write", { data });
     });
 
