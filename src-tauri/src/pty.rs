@@ -21,9 +21,9 @@ pub struct PtyState {
 ///   \x1b]133;A\x07       — prompt start (precmd, after D)
 ///
 /// PS1 is set to empty since we don't render the prompt.
-const ZSH_INIT: &str = "stty -echo; unsetopt zle; PS1=''; __aiki_precmd() { printf '\\e]133;D;%d\\a\\e]133;A\\a' $?; }; __aiki_preexec() { printf '\\e]133;C\\a'; }; autoload -Uz add-zsh-hook; add-zsh-hook precmd __aiki_precmd; add-zsh-hook preexec __aiki_preexec\n";
+const ZSH_INIT: &str = "stty -echo; unsetopt zle; PS1=''; __aiki_precmd() { printf '\\e]133;D;%d\\a\\e]7;file://%s%s\\a\\e]133;A\\a' $? \"$HOST\" \"$PWD\"; }; __aiki_preexec() { printf '\\e]133;C\\a'; }; autoload -Uz add-zsh-hook; add-zsh-hook precmd __aiki_precmd; add-zsh-hook preexec __aiki_preexec\n";
 
-const BASH_INIT: &str = "stty -echo; PS1=''; __aiki_prompt_command() { local ec=$?; printf '\\e]133;D;%d\\a\\e]133;A\\a' $ec; }; trap 'printf \"\\e]133;C\\a\"' DEBUG; PROMPT_COMMAND=__aiki_prompt_command\n";
+const BASH_INIT: &str = "stty -echo; PS1=''; __aiki_prompt_command() { local ec=$?; printf '\\e]133;D;%d\\a\\e]7;file://%s%s\\a\\e]133;A\\a' $ec \"$HOSTNAME\" \"$PWD\"; }; trap 'printf \"\\e]133;C\\a\"' DEBUG; PROMPT_COMMAND=__aiki_prompt_command\n";
 
 impl PtyState {
     pub fn spawn(cols: u16, rows: u16, app: AppHandle, shell_config: &ShellConfig) -> Result<Self, String> {

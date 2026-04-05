@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import BlockLog from "./components/BlockLog";
 import InputBar from "./components/InputBar";
 import { useConfig } from "./hooks/useConfig";
@@ -16,6 +16,7 @@ import { stripOsc } from "./utils/ansi";
 
 function App() {
   const { config } = useConfig();
+  const [cwd, setCwd] = useState("~");
   const activeBlockRef = useRef<string | null>(null);
   const capturingRef = useRef(false);
   const shellReadyRef = useRef(false);
@@ -35,7 +36,7 @@ function App() {
       const unlistenOutput = await listen<number[]>("pty-output", (event) => {
         const bytes = new Uint8Array(event.payload);
         const raw = new TextDecoder().decode(bytes);
-        const segments = parseOsc133(raw);
+        const segments = parseOscStream(raw);
 
         for (const seg of segments) {
           if (seg.type === "command-start") {
@@ -57,6 +58,10 @@ function App() {
               shellReadyResolveRef.current?.();
               shellReadyResolveRef.current = null;
             }
+            continue;
+          }
+          if (seg.type === "cwd") {
+            setCwd(seg.path);
             continue;
           }
           if (seg.type === "output" && seg.text) {
@@ -132,7 +137,7 @@ function App() {
     <>
       <div data-tauri-drag-region className="titlebar" />
       <BlockLog />
-      <InputBar onShellCommand={handleShellCommand} onAiPrompt={handleAiPrompt} />
+      <InputBar cwd={cwd} onShellCommand={handleShellCommand} onAiPrompt={handleAiPrompt} />
     </>
   );
 }
@@ -141,11 +146,13 @@ type Segment =
   | { type: "output"; text: string }
   | { type: "command-start" }
   | { type: "command-done"; exitCode: number }
-  | { type: "prompt" };
+  | { type: "prompt" }
+  | { type: "cwd"; path: string };
 
-function parseOsc133(raw: string): Segment[] {
+function parseOscStream(raw: string): Segment[] {
   const segments: Segment[] = [];
-  const re = /\x1b\]133;([A-Z])(?:;([^\x07]*))?\x07/g;
+  // Match OSC 133 (shell integration) and OSC 7 (cwd) sequences
+  const re = /\x1b\](?:133;([A-Z])(?:;([^\x07]*))?|7;file:\/\/[^/]*([^\x07]*))\x07/g;
   let lastIndex = 0;
   let match;
 
@@ -154,16 +161,22 @@ function parseOsc133(raw: string): Segment[] {
       segments.push({ type: "output", text: raw.slice(lastIndex, match.index) });
     }
 
-    const marker = match[1];
-    const params = match[2] || "";
+    if (match[1]) {
+      // OSC 133
+      const marker = match[1];
+      const params = match[2] || "";
 
-    if (marker === "C") {
-      segments.push({ type: "command-start" });
-    } else if (marker === "D") {
-      const exitCode = parseInt(params, 10) || 0;
-      segments.push({ type: "command-done", exitCode });
-    } else if (marker === "A") {
-      segments.push({ type: "prompt" });
+      if (marker === "C") {
+        segments.push({ type: "command-start" });
+      } else if (marker === "D") {
+        const exitCode = parseInt(params, 10) || 0;
+        segments.push({ type: "command-done", exitCode });
+      } else if (marker === "A") {
+        segments.push({ type: "prompt" });
+      }
+    } else if (match[3] !== undefined) {
+      // OSC 7 — cwd
+      segments.push({ type: "cwd", path: decodeURIComponent(match[3]) });
     }
 
     lastIndex = re.lastIndex;

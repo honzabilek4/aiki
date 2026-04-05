@@ -181,12 +181,24 @@ body {
 
 /* Input bar */
 
+.input-bar-wrapper {
+  padding: 4px 16px 10px 16px;
+  background: #1a1a2e;
+}
+
+.input-bar-cwd {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.2);
+  padding: 0 0 4px 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .input-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 16px 10px 16px;
-  background: #1a1a2e;
 }
 
 .input-bar-sigil {
@@ -207,23 +219,61 @@ body {
   color: #c4a7e7;
 }
 
-.input-bar-field {
+.input-bar-field-wrapper {
   flex: 1;
+  position: relative;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
-  padding: 8px 12px;
-  color: #e0e0e0;
-  font-family: inherit;
-  font-size: 13px;
-  outline: none;
 }
 
-.input-bar-field:focus {
+.input-bar-field-wrapper:focus-within {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
 }
 
+.input-bar-field {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  color: transparent;
+  caret-color: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
 .input-bar-field::placeholder {
   color: rgba(255, 255, 255, 0.25);
+}
+
+.input-bar-cursor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.input-bar-cursor-text {
+  color: #e0e0e0;
+}
+
+.input-bar-cursor-block {
+  background: #e0e0e0;
+  color: #1a1a2e;
+  animation: blink-cursor 1s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { background: #e0e0e0; color: #1a1a2e; }
+  50% { background: transparent; color: #e0e0e0; }
 }

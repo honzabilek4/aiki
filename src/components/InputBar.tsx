@@ -7,13 +7,16 @@ interface InputClassification {
 }
 
 interface InputBarProps {
+  cwd: string;
   onShellCommand: (command: string) => void;
   onAiPrompt: (prompt: string, commandLike: boolean) => void;
 }
 
-export default function InputBar({ onShellCommand, onAiPrompt }: InputBarProps) {
+export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarProps) {
   const [value, setValue] = useState("");
   const [mode, setMode] = useState<"idle" | "command" | "ai">("idle");
+  const [cursorPos, setCursorPos] = useState(0);
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -45,7 +48,12 @@ export default function InputBar({ onShellCommand, onAiPrompt }: InputBarProps) 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
+    setCursorPos(e.target.selectionStart ?? e.target.value.length);
     classifyValue(e.target.value);
+  };
+
+  const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    setCursorPos((e.target as HTMLInputElement).selectionStart ?? 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,26 +70,48 @@ export default function InputBar({ onShellCommand, onAiPrompt }: InputBarProps) 
     }
 
     setValue("");
+    setCursorPos(0);
     setMode("idle");
   };
 
   const isShell = mode === "command";
+  const displayCwd = cwd.replace(/^\/Users\/[^/]+/, "~");
+
+  // Character under cursor (for block cursor display)
+  const charUnderCursor = value[cursorPos] || " ";
+  const textBefore = value.slice(0, cursorPos);
+  const textAfter = value.slice(cursorPos + 1);
 
   return (
-    <form className="input-bar" onSubmit={handleSubmit}>
-      <span className={`input-bar-sigil ${isShell ? "input-bar-sigil--command" : "input-bar-sigil--ai"}`}>
-        {isShell ? "$" : ">"}
-      </span>
-      <input
-        ref={inputRef}
-        type="text"
-        className="input-bar-field"
-        value={value}
-        onChange={handleChange}
-        placeholder="Type a command or ask AI..."
-        spellCheck={false}
-        autoComplete="off"
-      />
-    </form>
+    <div className="input-bar-wrapper">
+      <div className="input-bar-cwd">{displayCwd}</div>
+      <form className="input-bar" onSubmit={handleSubmit}>
+        <span className={`input-bar-sigil ${isShell ? "input-bar-sigil--command" : "input-bar-sigil--ai"}`}>
+          {isShell ? "$" : ">"}
+        </span>
+        <div className="input-bar-field-wrapper">
+          <input
+            ref={inputRef}
+            type="text"
+            className="input-bar-field"
+            value={value}
+            onChange={handleChange}
+            onSelect={handleSelect}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={!focused && !value ? "Type a command or ask AI..." : undefined}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {focused && (
+            <div className="input-bar-cursor-overlay" aria-hidden>
+              <span className="input-bar-cursor-text">{textBefore}</span>
+              <span className="input-bar-cursor-block">{charUnderCursor}</span>
+              <span className="input-bar-cursor-text">{textAfter}</span>
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
   );
 }
