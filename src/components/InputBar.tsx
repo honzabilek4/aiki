@@ -15,6 +15,7 @@ interface InputBarProps {
 export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarProps) {
   const [value, setValue] = useState("");
   const [mode, setMode] = useState<"idle" | "command" | "ai">("idle");
+  const [forceShell, setForceShell] = useState(false);
   const [cursorPos, setCursorPos] = useState(0);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,10 +36,12 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
   }, []);
 
   const classifyValue = (text: string) => {
-    if (!text.trim()) {
-      setMode("idle");
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setMode(forceShell ? "command" : "idle");
       return;
     }
+    if (forceShell) return;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       const result = await invoke<InputClassification>("classify_input", { text });
@@ -52,6 +55,32 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
     classifyValue(e.target.value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // ! on empty input activates forced shell mode (consumed, not typed)
+    if (e.key === "!" && !value) {
+      e.preventDefault();
+      setForceShell(true);
+      setMode("command");
+      return;
+    }
+    // Escape or Backspace on empty input exits forced shell mode
+    if ((e.key === "Escape" || (e.key === "Backspace" && !value)) && forceShell) {
+      e.preventDefault();
+      e.stopPropagation();
+      setForceShell(false);
+      // Reclassify without forceShell — inline to avoid stale closure
+      const trimmed = value.trim();
+      if (!trimmed) {
+        setMode("idle");
+      } else {
+        invoke<InputClassification>("classify_input", { text: value }).then((result) => {
+          setMode(result.kind === "NaturalLanguage" || result.kind === "CommandLike" ? "ai" : "command");
+        });
+      }
+      return;
+    }
+  };
+
   const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
     setCursorPos((e.target as HTMLInputElement).selectionStart ?? 0);
   };
@@ -61,20 +90,24 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
     const trimmed = value.trim();
     if (!trimmed) return;
 
-    const result = await invoke<InputClassification>("classify_input", { text: trimmed });
-
-    if (result.kind === "Command") {
+    if (forceShell) {
       onShellCommand(trimmed);
     } else {
-      onAiPrompt(trimmed, result.kind === "CommandLike");
+      const result = await invoke<InputClassification>("classify_input", { text: trimmed });
+      if (result.kind === "Command") {
+        onShellCommand(trimmed);
+      } else {
+        onAiPrompt(trimmed, result.kind === "CommandLike");
+      }
     }
 
     setValue("");
     setCursorPos(0);
+    setForceShell(false);
     setMode("idle");
   };
 
-  const isShell = mode === "command";
+  const isShell = mode === "command" || forceShell;
   const displayCwd = cwd.replace(/^\/Users\/[^/]+/, "~");
 
   // Character under cursor (for block cursor display)
@@ -96,6 +129,7 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
             className="input-bar-field"
             value={value}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
             onSelect={handleSelect}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
