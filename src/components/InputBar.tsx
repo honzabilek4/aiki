@@ -109,6 +109,7 @@ export default function InputBar({ cwd, aiModel, onShellCommand, onAiPrompt }: I
       }
     }
 
+    clearTimeout(debounceRef.current);
     setValue("");
     setCursorPos(0);
     setForceShell(false);
