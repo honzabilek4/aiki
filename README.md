@@ -4,7 +4,7 @@ Human & AI, one terminal.
 
 Fast, open-source, local-first. Bring your own API key. No account, no cloud.
 
-![Aiki](assets/screenshot.png)
+![Aiki](assets/aiki_demo.gif)
 
 ## Stack
 
