@@ -1,15 +1,20 @@
 # Aiki configuration
 # Copy to ~/.config/aiki/config.toml
+# All settings are optional — defaults are shown below.
+
+# ─── Shell ───────────────────────────────────────────────────────────────────
 
 [shell]
-program = "/bin/zsh"
-args = ["-l"]
+program = "/bin/zsh"         # Shell binary path (default: $SHELL or /bin/zsh)
+args = ["-l"]                # Shell arguments (default: login shell)
+
+# ─── Appearance ──────────────────────────────────────────────────────────────
 
 [appearance]
 font_family = '"SF Mono", "Menlo", "Monaco", "Cascadia Code", monospace'
 font_size = 14
 cursor_blink = true
-scrollback = 10000
+scrollback = 10000           # Max lines kept in scroll buffer
 
 [appearance.theme]
 background = "#1a1a2e"
@@ -17,7 +22,62 @@ foreground = "#e0e0e0"
 cursor = "#e0e0e0"
 selection_background = "#3a3a5e"
 
+# ─── AI Provider ─────────────────────────────────────────────────────────────
+#
+# provider  — identifies which API format to use:
+#             "anthropic" uses the Claude Messages API
+#             anything else uses the OpenAI-compatible Chat Completions API
+# model     — model ID passed to the API
+# base_url  — API base URL (without /chat/completions or /messages suffix)
+#
+# API keys are stored in the macOS Keychain under the provider name.
+# On first launch, Aiki prompts you to enter the key for your configured provider.
+
+# ── Gemini (default) ──
+
 [ai]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-base_url = "https://api.anthropic.com"
+provider = "gemini"
+model = "gemini-2.5-flash"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+
+# ── OpenAI ──
+# [ai]
+# provider = "openai"
+# model = "gpt-4o"
+# base_url = "https://api.openai.com/v1"
+
+# ── Anthropic (Claude) ──
+# [ai]
+# provider = "anthropic"
+# model = "claude-sonnet-4-20250514"
+# base_url = "https://api.anthropic.com/v1"
+
+# ── Ollama (local) ──
+# [ai]
+# provider = "ollama"
+# model = "llama3.1"
+# base_url = "http://localhost:11434/v1"
+
+# ── LM Studio (local) ──
+# [ai]
+# provider = "lmstudio"
+# model = "loaded-model"
+# base_url = "http://localhost:1234/v1"
+
+# ── OpenRouter ──
+# [ai]
+# provider = "openrouter"
+# model = "anthropic/claude-sonnet-4-20250514"
+# base_url = "https://openrouter.ai/api/v1"
+
+# ── Groq ──
+# [ai]
+# provider = "groq"
+# model = "llama-3.3-70b-versatile"
+# base_url = "https://api.groq.com/openai/v1"
+
+# ── Mistral ──
+# [ai]
+# provider = "mistral"
+# model = "mistral-large-latest"
+# base_url = "https://api.mistral.ai/v1"

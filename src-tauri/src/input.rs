@@ -24,6 +24,14 @@ pub fn classify(input: &str) -> InputClassification {
         };
     }
 
+    // Natural language takes priority over binary lookup
+    if looks_like_natural_language(trimmed) {
+        return InputClassification {
+            kind: InputKind::NaturalLanguage,
+            binary: None,
+        };
+    }
+
     let first_token = trimmed.split_whitespace().next().unwrap_or("");
 
     if binary_exists(first_token) {
@@ -70,6 +78,30 @@ fn binary_exists(name: &str) -> bool {
                 return true;
             }
         }
+    }
+
+    false
+}
+
+fn looks_like_natural_language(input: &str) -> bool {
+    let lower = input.to_lowercase();
+    let first = lower.split_whitespace().next().unwrap_or("");
+
+    // Starts with a question word followed by more words
+    const QUESTION_WORDS: &[&str] = &[
+        "what", "how", "why", "when", "where", "who", "which",
+        "can", "could", "would", "should", "is", "are", "do",
+        "does", "did", "will", "explain", "tell", "show", "help",
+        "describe", "list",
+    ];
+    let word_count = input.split_whitespace().count();
+    if word_count >= 2 && QUESTION_WORDS.contains(&first) {
+        return true;
+    }
+
+    // Ends with ? (question)
+    if input.trim_end().ends_with('?') && word_count >= 2 {
+        return true;
     }
 
     false

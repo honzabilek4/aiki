@@ -74,6 +74,13 @@ export function updateAiBlock(id: string, updates: Partial<Pick<AiBlock, "respon
   emit();
 }
 
+export function appendAiResponse(id: string, content: string) {
+  blocks = blocks.map((b) =>
+    b.id === id && b.type === "ai" ? { ...b, response: b.response + content } : b
+  );
+  emit();
+}
+
 export function finishAiBlock(id: string) {
   blocks = blocks.map((b) =>
     b.id === id && b.type === "ai" ? { ...b, finishedAt: Date.now() } : b

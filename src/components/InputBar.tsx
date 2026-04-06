@@ -8,11 +8,12 @@ interface InputClassification {
 
 interface InputBarProps {
   cwd: string;
+  aiModel: string;
   onShellCommand: (command: string) => void;
   onAiPrompt: (prompt: string, commandLike: boolean) => void;
 }
 
-export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarProps) {
+export default function InputBar({ cwd, aiModel, onShellCommand, onAiPrompt }: InputBarProps) {
   const [value, setValue] = useState("");
   const [mode, setMode] = useState<"idle" | "command" | "ai">("idle");
   const [forceShell, setForceShell] = useState(false);
@@ -45,7 +46,14 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       const result = await invoke<InputClassification>("classify_input", { text });
-      setMode(result.kind === "NaturalLanguage" || result.kind === "CommandLike" ? "ai" : "command");
+      if (result.kind === "Command") {
+        setMode("command");
+      } else if (!trimmed.includes(" ")) {
+        // Single word, not a binary — stay idle to avoid flicker
+        setMode("idle");
+      } else {
+        setMode("ai");
+      }
     }, 150);
   };
 
@@ -117,7 +125,10 @@ export default function InputBar({ cwd, onShellCommand, onAiPrompt }: InputBarPr
 
   return (
     <div className="input-bar-wrapper">
-      <div className="input-bar-cwd">{displayCwd}</div>
+      <div className="input-bar-status">
+        <span className="input-bar-cwd">{displayCwd}</span>
+        {aiModel && <span className="input-bar-model">{aiModel}</span>}
+      </div>
       <form className="input-bar" onSubmit={handleSubmit}>
         <span className={`input-bar-sigil ${isShell ? "input-bar-sigil--command" : "input-bar-sigil--ai"}`}>
           {isShell ? "$" : ">"}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export interface ThemeConfig {
   background: string;
@@ -38,6 +39,10 @@ export function useConfig() {
 
   useEffect(() => {
     invoke<AppConfig>("get_config").then(setConfig);
+    const unlisten = listen("config-changed", () => {
+      invoke<AppConfig>("get_config").then(setConfig);
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, []);
 
   const updateConfig = async (newConfig: AppConfig) => {

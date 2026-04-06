@@ -91,9 +91,9 @@ impl Default for ThemeConfig {
 impl Default for AiConfig {
     fn default() -> Self {
         Self {
-            provider: "anthropic".to_string(),
-            model: "claude-sonnet-4-20250514".to_string(),
-            base_url: "https://api.anthropic.com".to_string(),
+            provider: "gemini".to_string(),
+            model: "gemini-pro-latest".to_string(),
+            base_url: "https://generativelanguage.googleapis.com/v1beta/openai".to_string(),
         }
     }
 }
